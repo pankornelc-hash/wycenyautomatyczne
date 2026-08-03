@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict
 # ==========================================
 # 1. KONFIGURACJA I BEZPIECZEŃSTWO
 # ==========================================
-SECRET_KEY = "super-secret-key-faktury-zyski-brutal"
+SECRET_KEY = "super-secret-key-faktury-zyski-fintech"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 dni
 
@@ -141,7 +141,7 @@ def initialize_database():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
-    # NOWE DANE LOGOWANIA
+    # KONTO LOGOWANIA
     admin_email = "kh@orbis-software.pl"
     admin = db.query(User).filter(User.email == admin_email).first()
     if not admin:
@@ -160,7 +160,7 @@ async def lifespan(app: FastAPI):
     initialize_database()
     yield
 
-app = FastAPI(title="Neobrutal Finance API", lifespan=lifespan)
+app = FastAPI(title="FinTech Analytics API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 # ==========================================
@@ -170,7 +170,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="BŁĘDNY E-MAIL LUB HASŁO!")
+        raise HTTPException(status_code=401, detail="Odmowa dostępu. Błędne dane.")
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "role": user.role}
 
@@ -185,7 +185,7 @@ def update_settings(payload: SettingsBase, db: Session = Depends(get_db), curren
     settings.vat_rate = payload.vat_rate
     settings.income_tax_rate = payload.income_tax_rate
     db.commit()
-    return {"msg": "USTAWIENIA ZAPISANE"}
+    return {"msg": "Parametry podatkowe zaktualizowane."}
 
 @app.get("/api/invoices", response_model=List[InvoiceResponse])
 def get_invoices(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -225,10 +225,10 @@ def delete_invoice(inv_id: int, db: Session = Depends(get_db), current_user: Use
     if inv:
         db.delete(inv)
         db.commit()
-    return {"msg": "FAKTURA USUNIĘTA"}
+    return {"msg": "Faktura wykasowana z rejestru."}
 
 # ==========================================
-# 6. FRONTEND NEOBRUTALISM (VUE 3 + TAILWIND)
+# 6. FRONTEND (VUE 3 + TAILWIND) - DARK FINTECH
 # ==========================================
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
@@ -238,126 +238,106 @@ def serve_frontend():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ZYSKOMIERZ 3000</title>
+        <title>FINANCE TRACKER</title>
         <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
         <style>
-            :root {
-                --bg: #f4f4f0;
-                --border-color: #000000;
-                --primary: #facc15; /* Yellow */
-                --secondary: #ff90e8; /* Pink */
-                --accent: #06b6d4; /* Cyan */
-                --success: #4ade80; /* Lime */
-                --card-bg: #ffffff;
-            }
-            
             body { 
-                font-family: 'Space Grotesk', sans-serif; 
-                background-color: var(--bg); 
-                color: #000; 
-                /* Opcjonalny lekki pattern */
-                background-image: radial-gradient(#000000 1px, transparent 1px);
-                background-size: 40px 40px;
-                background-position: -19px -19px;
+                font-family: 'Inter', sans-serif; 
+                background-color: #09090b; /* zinc-950 */
+                color: #fafafa; /* zinc-50 */
             }
             
-            /* KLASY NEOBRUTALISTYCZNE */
-            .brutal-border {
-                border: 3px solid var(--border-color);
+            /* Klasa dla wszystkich cyfr i finansów */
+            .font-mono {
+                font-family: 'JetBrains Mono', monospace;
             }
-            
-            .brutal-card {
-                background: var(--card-bg);
-                border: 3px solid var(--border-color);
+
+            .fin-card {
+                background: #18181b; /* zinc-900 */
+                border: 1px solid #27272a; /* zinc-800 */
+                border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            }
+
+            .fin-input {
+                background: #09090b; /* zinc-950 */
+                border: 1px solid #3f3f46; /* zinc-700 */
                 border-radius: 8px;
-                box-shadow: 6px 6px 0px 0px var(--border-color);
-            }
-
-            .brutal-input {
-                background: #fff;
-                border: 3px solid var(--border-color);
-                border-radius: 6px;
                 padding: 0.75rem 1rem;
-                font-weight: 700;
-                font-size: 1rem;
-                color: #000;
-                transition: all 0.1s;
-                box-shadow: inset 2px 2px 0px rgba(0,0,0,0.1);
+                color: #f4f4f5;
+                font-size: 0.875rem;
+                transition: all 0.2s;
+                width: 100%;
             }
-            .brutal-input:focus {
+            .fin-input:focus {
                 outline: none;
-                background: #fef08a; /* jasny żółty */
+                border-color: #10b981; /* emerald-500 */
+                box-shadow: 0 0 0 1px #10b981;
             }
+            .fin-input::placeholder { color: #52525b; } /* zinc-500 */
 
-            .brutal-btn {
-                background: var(--primary);
-                border: 3px solid var(--border-color);
-                border-radius: 6px;
-                font-weight: 800;
-                font-size: 1rem;
-                text-transform: uppercase;
+            .btn-primary {
+                background: #10b981; /* emerald-500 */
+                color: #022c22; /* emerald-950 */
+                font-weight: 600;
                 padding: 0.75rem 1.5rem;
-                box-shadow: 4px 4px 0px 0px var(--border-color);
-                transition: transform 0.1s, box-shadow 0.1s;
-                cursor: pointer;
-                color: #000;
-                display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem;
+                border-radius: 8px;
+                transition: all 0.2s;
+                border: none;
+                display: flex; justify-content: center; align-items: center; gap: 0.5rem;
             }
-            .brutal-btn:hover { background: #eab308; }
-            .brutal-btn:active {
-                transform: translate(4px, 4px);
-                box-shadow: 0px 0px 0px 0px var(--border-color);
+            .btn-primary:hover { background: #34d399; } /* emerald-400 */
+            .btn-primary:active { transform: translateY(1px); }
+
+            .btn-secondary {
+                background: transparent;
+                border: 1px solid #3f3f46;
+                color: #e4e4e7;
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
+                font-weight: 500;
+                transition: all 0.2s;
             }
-            
-            .brutal-btn-pink { background: var(--secondary); }
-            .brutal-btn-pink:hover { background: #f472b6; }
-            
-            .brutal-btn-cyan { background: var(--accent); color: #fff;}
-            .brutal-btn-cyan:hover { background: #0891b2; }
+            .btn-secondary:hover { background: #27272a; color: #fff; }
 
             .nav-item {
                 display: flex; align-items: center; gap: 0.75rem;
-                padding: 1rem;
-                border: 3px solid transparent;
+                padding: 0.875rem 1.25rem;
                 border-radius: 8px;
-                font-size: 1.1rem;
-                font-weight: 800;
-                color: #000;
-                text-transform: uppercase;
-                transition: all 0.1s;
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #a1a1aa; /* zinc-400 */
+                transition: all 0.2s;
+                border-left: 3px solid transparent;
             }
-            .nav-item:hover { border-color: #000; background: #fff; }
-            .nav-item.active { border-color: #000; background: var(--primary); box-shadow: 4px 4px 0px #000; }
-
-            /* Tabela Brutal */
-            .brutal-table-wrapper {
-                border: 3px solid #000;
-                border-radius: 8px;
-                background: #fff;
-                overflow-x: auto;
-                box-shadow: 6px 6px 0px #000;
+            .nav-item:hover { color: #fafafa; background: #27272a; }
+            .nav-item.active { 
+                color: #10b981; 
+                background: #022c22; /* emerald-950 */
+                border-left-color: #10b981;
             }
-            .brutal-table th { border-bottom: 3px solid #000; padding: 1rem; font-weight: 800; text-transform: uppercase; }
-            .brutal-table td { border-bottom: 2px solid #000; padding: 1rem; font-weight: 600; }
-            .brutal-table tr:last-child td { border-bottom: none; }
-            .brutal-table tbody tr:hover { background: #fef08a; }
 
-            /* Animacje Vue */
+            /* Custom scrollbar for dark theme */
+            ::-webkit-scrollbar { width: 8px; height: 8px; }
+            ::-webkit-scrollbar-track { background: #09090b; }
+            ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+            ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
             .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
             .fade-enter-from, .fade-leave-to { opacity: 0; }
         </style>
     </head>
-    <body class="flex flex-col h-screen overflow-hidden">
-        <div id="app" class="h-full w-full flex flex-col relative">
+    <body class="flex flex-col md:flex-row h-screen overflow-hidden">
+        <div id="app" class="h-full w-full flex relative">
             
             <!-- TOAST -->
             <transition name="fade">
-                <div v-if="toast.show" class="fixed top-6 right-6 z-[100] px-6 py-4 brutal-card flex items-center gap-3 font-black text-lg"
-                     :class="toast.type === 'error' ? 'bg-rose-400' : 'bg-green-400'">
-                    <i class="fa-solid" :class="toast.type === 'error' ? 'fa-skull' : 'fa-bolt'"></i>
+                <div v-if="toast.show" class="fixed top-6 right-6 z-[100] px-5 py-3 fin-card border-l-4 shadow-2xl flex items-center gap-3 text-sm font-medium"
+                     :class="toast.type === 'error' ? 'border-rose-500 text-rose-100' : 'border-emerald-500 text-emerald-100'">
+                    <i class="fa-solid" :class="toast.type === 'error' ? 'fa-circle-exclamation text-rose-500' : 'fa-circle-check text-emerald-500'"></i>
                     {{ toast.message }}
                 </div>
             </transition>
@@ -365,118 +345,142 @@ def serve_frontend():
             <!-- Ekran logowania -->
             <div v-if="!token" class="flex-1 flex flex-col items-center justify-center p-4">
                 <div class="w-full max-w-sm">
-                    <div class="mb-8 text-center bg-black text-white brutal-card border-black p-4 rotate-[-2deg] mx-auto w-fit">
-                        <h2 class="text-3xl font-black tracking-tighter uppercase">ZYSKOMIERZ<br>RADAR</h2>
+                    <div class="mb-10 text-center">
+                        <i class="fa-solid fa-layer-group text-4xl text-emerald-500 mb-4"></i>
+                        <h2 class="text-2xl font-semibold tracking-tight text-white">FINANCE TRACKER</h2>
+                        <p class="text-xs text-zinc-500 mt-2 uppercase tracking-widest">Autoryzacja dostępu</p>
                     </div>
-                    <div class="brutal-card p-8 bg-white">
+                    <div class="fin-card p-8">
                         <form @submit.prevent="login" class="space-y-5">
                             <div>
-                                <label class="block text-sm font-black uppercase mb-1">IDENTYFIKATOR (EMAIL)</label>
-                                <input type="email" v-model="loginData.username" required class="brutal-input w-full">
+                                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Adres E-mail</label>
+                                <input type="email" v-model="loginData.username" required class="fin-input font-mono" placeholder="sys@admin.com">
                             </div>
                             <div>
-                                <label class="block text-sm font-black uppercase mb-1">KOD DOSTĘPU</label>
-                                <input type="password" v-model="loginData.password" required class="brutal-input w-full">
+                                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Hasło Główne</label>
+                                <input type="password" v-model="loginData.password" required class="fin-input font-mono">
                             </div>
-                            <button type="submit" class="brutal-btn w-full mt-4 py-4 text-xl">WEJDŹ <i class="fa-solid fa-arrow-right"></i></button>
+                            <button type="submit" class="btn-primary w-full mt-4 py-3 text-sm uppercase tracking-wider font-bold">Połącz z systemem</button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <!-- Główna Aplikacja (Top Navbar + Content) -->
+            <!-- Główna Aplikacja -->
             <template v-else>
                 
-                <!-- TOP NAVBAR NEOBRUTAL -->
-                <header class="bg-white border-b-[4px] border-black flex justify-between items-center p-4 z-40 sticky top-0">
-                    <div class="flex items-center gap-4">
-                        <div class="bg-black text-yellow-400 px-3 py-1 border-[3px] border-black font-black text-xl italic tracking-tighter uppercase transform -skew-x-6 hidden sm:block">
-                            ZYSKOMIERZ
+                <!-- Sidebar (Desktop) -->
+                <div class="hidden md:flex flex-col w-64 bg-[#09090b] border-r border-zinc-800 z-20 h-full flex-shrink-0">
+                    <div class="p-6 border-b border-zinc-800 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-500">
+                            <i class="fa-solid fa-chart-line"></i>
                         </div>
-                        
-                        <!-- Desktop Nav -->
-                        <nav class="hidden md:flex gap-2 ml-4">
-                            <button @click="currentTab = 'dashboard'" class="brutal-btn" :class="currentTab==='dashboard' ? 'bg-cyan-400' : 'bg-white shadow-none'">Baza Faktur</button>
-                            <button @click="currentTab = 'add_invoice'" class="brutal-btn" :class="currentTab==='add_invoice' ? 'bg-pink-400' : 'bg-white shadow-none'">Kalkulator</button>
-                            <button v-if="user.role === 'admin'" @click="currentTab = 'admin'" class="brutal-btn" :class="currentTab==='admin' ? 'bg-yellow-400' : 'bg-white shadow-none'"><i class="fa-solid fa-gear"></i></button>
-                        </nav>
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <div class="hidden sm:block text-right">
-                            <p class="font-black text-sm uppercase">{{ user.email }}</p>
-                            <p class="text-[10px] font-bold bg-black text-white px-1 inline-block uppercase">{{ user.role }}</p>
+                        <div>
+                            <h1 class="text-sm font-bold text-white tracking-tight leading-none">FINANCE<br><span class="text-emerald-500">TRACKER</span></h1>
                         </div>
-                        <button @click="logout" class="brutal-btn bg-white hover:bg-rose-400 py-2 px-3 shadow-none border-2"><i class="fa-solid fa-power-off"></i></button>
-                        
-                        <!-- Mobile Toggle -->
-                        <button class="md:hidden brutal-btn bg-yellow-400 py-2 px-3" @click="mobileMenuOpen = !mobileMenuOpen"><i class="fa-solid fa-bars"></i></button>
                     </div>
-                </header>
-                
-                <!-- Mobile Dropdown -->
-                <div v-if="mobileMenuOpen" class="md:hidden bg-white border-b-[4px] border-black p-4 space-y-3 z-30 relative shadow-[0px_10px_0px_rgba(0,0,0,1)]">
-                    <button @click="setTab('dashboard')" class="brutal-btn w-full" :class="currentTab==='dashboard' ? 'bg-cyan-400' : 'bg-white'">Baza Faktur</button>
-                    <button @click="setTab('add_invoice')" class="brutal-btn w-full" :class="currentTab==='add_invoice' ? 'bg-pink-400' : 'bg-white'">Kalkulator Zysku</button>
-                    <button v-if="user.role === 'admin'" @click="setTab('admin')" class="brutal-btn w-full" :class="currentTab==='admin' ? 'bg-yellow-400' : 'bg-white'">Administracja</button>
+                    <nav class="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
+                        <button @click="setTab('dashboard')" class="nav-item w-full" :class="currentTab==='dashboard' ? 'active' : ''">
+                            <i class="fa-solid fa-table-list w-5 text-center"></i> Rejestr Finansowy
+                        </button>
+                        <button @click="setTab('add_invoice')" class="nav-item w-full" :class="currentTab==='add_invoice' ? 'active' : ''">
+                            <i class="fa-solid fa-calculator w-5 text-center"></i> Analiza Faktury
+                        </button>
+                        <button v-if="user.role === 'admin'" @click="setTab('admin')" class="nav-item w-full" :class="currentTab==='admin' ? 'active' : ''">
+                            <i class="fa-solid fa-sliders w-5 text-center"></i> Parametry Systemu
+                        </button>
+                    </nav>
+                    <div class="p-4 border-t border-zinc-800 bg-zinc-900/50">
+                        <div class="flex items-center gap-3 mb-4 px-2">
+                            <div class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400">
+                                {{ user.email.charAt(0).toUpperCase() }}
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-xs font-medium text-zinc-300 truncate">{{ user.email }}</p>
+                                <p class="text-[9px] text-zinc-500 uppercase tracking-widest">{{ user.role }}</p>
+                            </div>
+                        </div>
+                        <button @click="logout" class="btn-secondary w-full text-xs py-2">Zakończ sesję</button>
+                    </div>
                 </div>
 
+                <!-- Mobile Header -->
+                <div class="md:hidden fixed top-0 w-full bg-[#09090b] z-50 flex justify-between items-center p-4 border-b border-zinc-800">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-emerald-500"></i>
+                        <span class="font-bold text-sm text-white">FINANCE TRACKER</span>
+                    </div>
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-zinc-400 p-1"><i class="fa-solid fa-bars text-lg"></i></button>
+                </div>
+                
+                <!-- Mobile Dropdown -->
+                <transition name="fade">
+                    <div v-if="mobileMenuOpen" class="md:hidden fixed top-[53px] left-0 w-full bg-[#18181b] z-40 p-4 space-y-2 border-b border-zinc-800 shadow-2xl">
+                        <button @click="setTab('dashboard')" class="nav-item w-full" :class="currentTab==='dashboard' ? 'active' : ''">Rejestr Finansowy</button>
+                        <button @click="setTab('add_invoice')" class="nav-item w-full" :class="currentTab==='add_invoice' ? 'active' : ''">Analiza Faktury</button>
+                        <button v-if="user.role === 'admin'" @click="setTab('admin')" class="nav-item w-full" :class="currentTab==='admin' ? 'active' : ''">Parametry Systemu</button>
+                        <hr class="border-zinc-800 my-2">
+                        <button @click="logout" class="nav-item w-full text-rose-500 hover:text-rose-400">Zakończ sesję</button>
+                    </div>
+                </transition>
+
                 <!-- MAIN CONTENT AREA -->
-                <main class="flex-1 overflow-y-auto w-full p-4 md:p-8 z-10">
+                <main class="flex-1 overflow-y-auto w-full pt-20 md:pt-0 p-4 md:p-8 z-10 bg-[#09090b]">
                     <transition name="fade" mode="out-in">
                         
                         <!-- TAB: BAZA FAKTUR -->
                         <div v-if="currentTab === 'dashboard'" class="max-w-7xl mx-auto space-y-8">
                             
                             <div>
-                                <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tighter drop-shadow-[2px_2px_0px_#000] text-white">REJESTR FAKTUR</h1>
+                                <h1 class="text-2xl font-semibold text-white tracking-tight">Analityka Portfela</h1>
+                                <p class="text-sm text-zinc-500 mt-1">Zestawienie przychodów, kosztów i realnego zysku netto.</p>
                             </div>
                             
                             <!-- Podsumowanie finansowe -->
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                <div class="brutal-card p-6 bg-cyan-400">
-                                    <p class="font-black text-black uppercase mb-1">Przychód Netto</p>
-                                    <p class="text-3xl font-black bg-white inline-block px-2 border-2 border-black">{{ formatCurrency(totalRevenueNet) }}</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div class="fin-card p-5 border-l-2 border-l-blue-500">
+                                    <p class="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-2">Przychód Netto</p>
+                                    <p class="text-2xl font-mono font-bold text-white">{{ formatCurrency(totalRevenueNet) }}</p>
                                 </div>
-                                <div class="brutal-card p-6 bg-rose-400">
-                                    <p class="font-black text-black uppercase mb-1">Koszty Netto</p>
-                                    <p class="text-3xl font-black bg-white inline-block px-2 border-2 border-black">{{ formatCurrency(totalCostNet) }}</p>
+                                <div class="fin-card p-5 border-l-2 border-l-rose-500">
+                                    <p class="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-2">Koszty Netto</p>
+                                    <p class="text-2xl font-mono font-bold text-white">{{ formatCurrency(totalCostNet) }}</p>
                                 </div>
-                                <div class="brutal-card p-6 bg-lime-400 transform sm:-translate-y-2 sm:rotate-2">
-                                    <p class="font-black text-black uppercase mb-1"><i class="fa-solid fa-money-bill-wave"></i> CZYSTY ZYSK</p>
-                                    <p class="text-4xl font-black bg-black text-lime-400 inline-block px-3 py-1">{{ formatCurrency(totalNetProfit) }}</p>
+                                <div class="fin-card p-5 bg-emerald-500/10 border border-emerald-500/20">
+                                    <p class="text-xs font-medium text-emerald-500 uppercase tracking-widest mb-2">Zysk Netto (Czysty)</p>
+                                    <p class="text-3xl font-mono font-bold text-emerald-400">{{ formatCurrency(totalNetProfit) }}</p>
                                 </div>
                             </div>
 
                             <!-- Tabela -->
-                            <div class="brutal-table-wrapper">
-                                <table class="w-full text-left brutal-table whitespace-nowrap">
-                                    <thead class="bg-yellow-400">
+                            <div class="fin-card overflow-x-auto">
+                                <table class="w-full text-left whitespace-nowrap">
+                                    <thead class="bg-zinc-900/50 border-b border-zinc-800">
                                         <tr>
-                                            <th>Numer / Klient</th>
-                                            <th>Data</th>
-                                            <th class="text-right">Przychód</th>
-                                            <th class="text-right">Koszt</th>
-                                            <th class="text-right bg-black text-white">Zysk Na Czysto</th>
-                                            <th class="text-center">Del</th>
+                                            <th class="px-5 py-4 text-xs font-medium text-zinc-500 uppercase tracking-wider">Dokument</th>
+                                            <th class="px-5 py-4 text-xs font-medium text-zinc-500 uppercase tracking-wider">Data</th>
+                                            <th class="px-5 py-4 text-xs font-medium text-zinc-500 uppercase tracking-wider text-right">Przychód</th>
+                                            <th class="px-5 py-4 text-xs font-medium text-zinc-500 uppercase tracking-wider text-right">Koszt</th>
+                                            <th class="px-5 py-4 text-xs font-medium text-emerald-500 uppercase tracking-wider text-right">Zysk Na Czysto</th>
+                                            <th class="px-5 py-4 text-center"></th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        <tr v-for="inv in invoices" :key="inv.id">
-                                            <td>
-                                                <div class="font-black text-lg">{{ inv.invoice_number }}</div>
-                                                <div class="text-sm">{{ inv.client_name }}</div>
+                                    <tbody class="divide-y divide-zinc-800/50">
+                                        <tr v-for="inv in invoices" :key="inv.id" class="hover:bg-zinc-800/30 transition">
+                                            <td class="px-5 py-4">
+                                                <div class="font-medium text-zinc-200">{{ inv.invoice_number }}</div>
+                                                <div class="text-xs text-zinc-500 mt-0.5">{{ inv.client_name }}</div>
                                             </td>
-                                            <td>{{ inv.issue_date }}</td>
-                                            <td class="text-right font-black text-cyan-600">{{ formatCurrency(inv.revenue_net) }}</td>
-                                            <td class="text-right font-black text-rose-600">{{ formatCurrency(inv.cost_net) }}</td>
-                                            <td class="text-right text-xl font-black bg-lime-200 border-l-3 border-black">{{ formatCurrency(inv.calc_net_profit) }}</td>
-                                            <td class="text-center">
-                                                <button @click="deleteInvoice(inv.id)" class="bg-black text-white px-3 py-1 font-black hover:bg-rose-500 hover:text-black border-2 border-transparent transition">X</button>
+                                            <td class="px-5 py-4 text-sm text-zinc-400 font-mono">{{ inv.issue_date }}</td>
+                                            <td class="px-5 py-4 text-sm font-mono text-zinc-300 text-right">{{ formatCurrency(inv.revenue_net) }}</td>
+                                            <td class="px-5 py-4 text-sm font-mono text-rose-400/80 text-right">{{ formatCurrency(inv.cost_net) }}</td>
+                                            <td class="px-5 py-4 text-base font-mono font-bold text-emerald-400 text-right">{{ formatCurrency(inv.calc_net_profit) }}</td>
+                                            <td class="px-5 py-4 text-center">
+                                                <button @click="deleteInvoice(inv.id)" class="text-zinc-600 hover:text-rose-500 transition px-2 py-1"><i class="fa-solid fa-trash"></i></button>
                                             </td>
                                         </tr>
                                         <tr v-if="invoices.length === 0">
-                                            <td colspan="6" class="py-12 text-center font-black uppercase text-xl bg-gray-100">Baza jest pusta. Dodaj fakturę!</td>
+                                            <td colspan="6" class="py-12 text-center text-sm text-zinc-600">Brak danych finansowych w rejestrze.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -486,84 +490,90 @@ def serve_frontend():
                         <!-- TAB: DODAWANIE (KALKULATOR NA ŻYWO) -->
                         <div v-else-if="currentTab === 'add_invoice'" class="max-w-7xl mx-auto space-y-6">
                             
-                            <div>
-                                <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tighter drop-shadow-[2px_2px_0px_#000] text-white">KALKULATOR</h1>
+                            <div class="border-b border-zinc-800 pb-4">
+                                <h1 class="text-2xl font-semibold text-white tracking-tight">Kalkulator Marginesu</h1>
+                                <p class="text-sm text-zinc-500 mt-1">Wprowadź dane zlecenia. System natychmiast wyliczy obciążenia i zysk bazując na aktualnych parametrach.</p>
                             </div>
 
                             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                                 
                                 <!-- Formularz Wprowadzania -->
                                 <div class="lg:col-span-7 space-y-6">
-                                    <form @submit.prevent="saveInvoice" class="brutal-card p-6 md:p-8 space-y-6 bg-white">
+                                    <form @submit.prevent="saveInvoice" class="fin-card p-6 md:p-8 space-y-8">
                                         
-                                        <div class="bg-gray-100 p-4 border-[3px] border-black">
-                                            <h3 class="font-black uppercase text-xl mb-4 bg-black text-white inline-block px-2">DANE FAKTURY</h3>
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div><label class="block font-black uppercase mb-1">Numer</label><input type="text" v-model="form.invoice_number" required class="brutal-input w-full"></div>
-                                                <div><label class="block font-black uppercase mb-1">Data</label><input type="date" v-model="form.issue_date" required class="brutal-input w-full"></div>
-                                                <div class="sm:col-span-2"><label class="block font-black uppercase mb-1">Klient</label><input type="text" v-model="form.client_name" required class="brutal-input w-full"></div>
+                                        <div>
+                                            <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fa-solid fa-file-invoice"></i> Metadane Dokumentu</h3>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                                <div><label class="block text-xs font-medium text-zinc-400 mb-1.5">Numer Faktury</label><input type="text" v-model="form.invoice_number" required class="fin-input font-mono"></div>
+                                                <div><label class="block text-xs font-medium text-zinc-400 mb-1.5">Data Wystawienia</label><input type="date" v-model="form.issue_date" required class="fin-input font-mono text-zinc-300"></div>
+                                                <div class="sm:col-span-2"><label class="block text-xs font-medium text-zinc-400 mb-1.5">Nabywca (Klient)</label><input type="text" v-model="form.client_name" required class="fin-input"></div>
                                             </div>
                                         </div>
 
-                                        <div class="bg-gray-100 p-4 border-[3px] border-black space-y-4">
-                                            <h3 class="font-black uppercase text-xl bg-black text-white inline-block px-2">KWOTY (PLN)</h3>
+                                        <div class="pt-2">
+                                            <h3 class="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fa-solid fa-coins"></i> Wartości Finansowe</h3>
                                             
-                                            <div class="bg-cyan-200 p-4 border-[3px] border-black">
-                                                <label class="block font-black uppercase mb-1 text-xl">Przychód Netto</label>
-                                                <input type="number" step="0.01" v-model.number="form.revenue_net" required class="brutal-input w-full text-2xl font-black">
-                                            </div>
-                                            
-                                            <div class="bg-pink-200 p-4 border-[3px] border-black grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div class="sm:col-span-2">
-                                                    <label class="block font-black uppercase mb-1 text-xl">Koszty poniesione</label>
-                                                </div>
+                                            <div class="space-y-5">
                                                 <div>
-                                                    <label class="block font-black uppercase mb-1 text-sm">Koszty NETTO</label>
-                                                    <input type="number" step="0.01" v-model.number="form.cost_net" required class="brutal-input w-full">
+                                                    <label class="block text-xs font-medium text-zinc-400 mb-1.5">Przychód Netto (PLN)</label>
+                                                    <input type="number" step="0.01" v-model.number="form.revenue_net" required class="fin-input font-mono text-lg text-emerald-400">
                                                 </div>
-                                                <div>
-                                                    <label class="block font-black uppercase mb-1 text-sm">Koszty BRUTTO</label>
-                                                    <input type="number" step="0.01" v-model.number="form.cost_gross" required class="brutal-input w-full">
+                                                
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-4 bg-zinc-950/50 rounded-lg border border-zinc-800/50">
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-zinc-400 mb-1.5">Koszty Poniesione NETTO</label>
+                                                        <input type="number" step="0.01" v-model.number="form.cost_net" required class="fin-input font-mono text-rose-400">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-zinc-400 mb-1.5">Koszty Poniesione BRUTTO</label>
+                                                        <input type="number" step="0.01" v-model.number="form.cost_gross" required class="fin-input font-mono text-rose-400">
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                         
-                                        <button type="submit" class="brutal-btn brutal-btn-pink w-full py-4 text-2xl">
-                                            <i class="fa-solid fa-floppy-disk"></i> ZAPISZ W BAZIE
-                                        </button>
+                                        <div class="pt-4 border-t border-zinc-800">
+                                            <button type="submit" class="btn-primary w-full py-3 text-sm tracking-widest uppercase">Zapisz Operację do Bazy</button>
+                                        </div>
                                     </form>
                                 </div>
 
                                 <!-- Kalkulator na żywo (TERMINAL STYLE) -->
                                 <div class="lg:col-span-5 sticky top-24">
-                                    <div class="brutal-card bg-black text-white p-0 overflow-hidden shadow-[8px_8px_0px_#facc15]">
-                                        <div class="bg-yellow-400 text-black font-black uppercase p-3 border-b-[3px] border-black text-xl flex justify-between">
-                                            <span>LIVE CALC</span>
-                                            <span class="text-sm border-2 border-black px-1 bg-white">VAT: {{settings.vat_rate}}% | PIT: {{settings.income_tax_rate}}%</span>
+                                    <div class="fin-card bg-[#050505] overflow-hidden border-zinc-800">
+                                        <div class="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/30">
+                                            <span class="text-xs font-bold text-zinc-400 uppercase tracking-widest">Live Output</span>
+                                            <div class="flex gap-2 text-[10px] font-mono text-zinc-500">
+                                                <span class="bg-zinc-800 px-1.5 py-0.5 rounded">VAT: {{settings.vat_rate}}%</span>
+                                                <span class="bg-zinc-800 px-1.5 py-0.5 rounded">PIT: {{settings.income_tax_rate}}%</span>
+                                            </div>
                                         </div>
                                         
-                                        <div class="p-6 font-mono text-lg space-y-4">
+                                        <div class="p-6 font-mono text-sm space-y-5">
                                             
-                                            <div class="border-b-2 border-dashed border-gray-700 pb-4">
-                                                <div class="flex justify-between"><span>Dochód:</span> <span class="text-white">{{ formatCurrency(liveCalc.income) }}</span></div>
-                                                <div class="flex justify-between mt-2"><span>Podatek (PIT):</span> <span class="text-rose-400">-{{ formatCurrency(liveCalc.income_tax) }}</span></div>
+                                            <div class="space-y-2">
+                                                <div class="flex justify-between text-zinc-400"><span>Baza opodatkowania (Dochód)</span> <span>{{ formatCurrency(liveCalc.income) }}</span></div>
+                                                <div class="flex justify-between text-rose-400/80"><span>Podatek Dochodowy (PIT)</span> <span>-{{ formatCurrency(liveCalc.income_tax) }}</span></div>
                                             </div>
                                             
-                                            <div class="border-b-2 border-dashed border-gray-700 pb-4">
-                                                <div class="flex justify-between"><span>VAT (od klienta):</span> <span class="text-cyan-400">{{ formatCurrency(liveCalc.vat_należny) }}</span></div>
-                                                <div class="flex justify-between mt-2"><span>VAT (z kosztów):</span> <span class="text-lime-400">-{{ formatCurrency(liveCalc.vat_naliczony) }}</span></div>
+                                            <div class="h-px bg-zinc-800 border-none w-full"></div>
+                                            
+                                            <div class="space-y-2">
+                                                <div class="flex justify-between text-zinc-400"><span>VAT Należny (od przychodu)</span> <span>{{ formatCurrency(liveCalc.vat_należny) }}</span></div>
+                                                <div class="flex justify-between text-emerald-500/80"><span>VAT Naliczony (z kosztów)</span> <span>-{{ formatCurrency(liveCalc.vat_naliczony) }}</span></div>
                                                 
-                                                <div class="mt-4 p-2 font-black text-center text-xl" :class="liveCalc.vat_to_pay >= 0 ? 'bg-rose-500 text-black' : 'bg-cyan-500 text-black'">
-                                                    {{ liveCalc.vat_to_pay >= 0 ? 'VAT DO US:' : 'VAT ZWROT:' }} {{ formatCurrency(Math.abs(liveCalc.vat_to_pay)) }}
+                                                <div class="flex justify-between items-center mt-3 pt-3 border-t border-dashed border-zinc-800 text-sm font-bold" :class="liveCalc.vat_to_pay >= 0 ? 'text-amber-500' : 'text-blue-400'">
+                                                    <span>{{ liveCalc.vat_to_pay >= 0 ? 'VAT do Urzędu Skarbowego' : 'Nadwyżka VAT (do zwrotu)' }}</span>
+                                                    <span>{{ formatCurrency(Math.abs(liveCalc.vat_to_pay)) }}</span>
                                                 </div>
                                             </div>
                                             
                                         </div>
                                         
                                         <!-- Wynik na rękę -->
-                                        <div class="bg-lime-400 p-6 border-t-[3px] border-black">
-                                            <p class="font-black text-black uppercase text-xl mb-1">ZYSK NA CZYSTO:</p>
-                                            <p class="text-5xl font-black text-black bg-white inline-block px-3 py-1 border-[4px] border-black shadow-[4px_4px_0px_#000]">{{ formatCurrency(liveCalc.net_profit) }}</p>
+                                        <div class="p-6 bg-emerald-500/10 border-t border-emerald-500/20">
+                                            <p class="text-[10px] font-medium text-emerald-500 uppercase tracking-widest mb-1">Zysk Netto (Po opodatkowaniu)</p>
+                                            <p class="text-4xl font-mono font-bold text-emerald-400">{{ formatCurrency(liveCalc.net_profit) }}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -572,34 +582,35 @@ def serve_frontend():
 
                         <!-- TAB: ADMINISTRACJA -->
                         <div v-else-if="currentTab === 'admin'" class="max-w-3xl mx-auto space-y-6">
-                            <div>
-                                <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tighter drop-shadow-[2px_2px_0px_#000] text-white">USTAWIENIA</h1>
+                            <div class="border-b border-zinc-800 pb-4">
+                                <h1 class="text-2xl font-semibold text-white tracking-tight">Parametry Systemowe</h1>
+                                <p class="text-sm text-zinc-500 mt-1">Ustawienia globalne stawek podatkowych dla nowych kalkulacji.</p>
                             </div>
                             
-                            <div class="brutal-card p-8 bg-white">
+                            <div class="fin-card p-6 md:p-8">
                                 <form @submit.prevent="saveSettings" class="space-y-6">
                                     
-                                    <div class="bg-[#c4a1ff] p-6 border-[3px] border-black">
-                                        <h3 class="font-black text-2xl uppercase mb-6 bg-black text-white inline-block px-2">PODATKI & VAT</h3>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-percent mr-2"></i> Stawki Główne</h3>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-5 bg-zinc-950/50 rounded-lg border border-zinc-800/50">
                                             <div>
-                                                <label class="block font-black uppercase mb-1">Stawka VAT (%)</label>
+                                                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Podstawowa stawka VAT</label>
                                                 <div class="relative">
-                                                    <input type="number" step="0.1" v-model="settings.vat_rate" required class="brutal-input w-full pr-8 text-xl">
-                                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 font-black text-xl">%</span>
+                                                    <input type="number" step="0.1" v-model="settings.vat_rate" required class="fin-input font-mono pr-8 text-lg">
+                                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-zinc-500">%</span>
                                                 </div>
                                             </div>
                                             <div>
-                                                <label class="block font-black uppercase mb-1">Podatek Dochodowy (%)</label>
+                                                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Podatek Dochodowy (PIT)</label>
                                                 <div class="relative">
-                                                    <input type="number" step="0.1" v-model="settings.income_tax_rate" required class="brutal-input w-full pr-8 text-xl">
-                                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 font-black text-xl">%</span>
+                                                    <input type="number" step="0.1" v-model="settings.income_tax_rate" required class="fin-input font-mono pr-8 text-lg">
+                                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-zinc-500">%</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <button type="submit" class="brutal-btn w-full py-4 text-xl bg-yellow-400">ZAPISZ SYSTEM</button>
+                                    <button type="submit" class="btn-primary w-full sm:w-auto py-3 text-sm tracking-widest uppercase px-8">Aktualizuj Parametry</button>
                                 </form>
                             </div>
                         </div>
@@ -614,8 +625,8 @@ def serve_frontend():
                 data() {
                     return {
                         loginData: { username: '', password: '' },
-                        token: localStorage.getItem('invoice_token') || null,
-                        user: JSON.parse(localStorage.getItem('invoice_user')) || {},
+                        token: localStorage.getItem('fintech_token') || null,
+                        user: JSON.parse(localStorage.getItem('fintech_user')) || {},
                         currentTab: 'dashboard',
                         mobileMenuOpen: false,
                         toast: { show: false, message: '', type: 'success' },
@@ -692,14 +703,14 @@ def serve_frontend():
                             
                             this.token = data.access_token;
                             this.user = { email: this.loginData.username, role: data.role };
-                            localStorage.setItem('invoice_token', this.token);
-                            localStorage.setItem('invoice_user', JSON.stringify(this.user));
+                            localStorage.setItem('fintech_token', this.token);
+                            localStorage.setItem('fintech_user', JSON.stringify(this.user));
                             this.loadData();
                         } catch(e) { this.showToast(e.message, 'error'); }
                     },
                     logout() {
                         this.token = null; this.user = {};
-                        localStorage.removeItem('invoice_token'); localStorage.removeItem('invoice_user');
+                        localStorage.removeItem('fintech_token'); localStorage.removeItem('fintech_user');
                     },
                     setTab(tab) {
                         this.currentTab = tab; this.mobileMenuOpen = false;
@@ -714,19 +725,18 @@ def serve_frontend():
                     async saveSettings() {
                         try {
                             await this.api('settings', 'PUT', this.settings);
-                            this.showToast("ZAPISANO USTAWIENIA!");
+                            this.showToast("Parametry systemu zostały zapisane.");
                         } catch(e) { this.showToast(e.message, 'error'); }
                     },
                     async saveInvoice() {
                         try {
                             const payload = {...this.form};
-                            // Walidacja czy liczby nie są puste
                             payload.revenue_net = Number(payload.revenue_net) || 0;
                             payload.cost_net = Number(payload.cost_net) || 0;
                             payload.cost_gross = Number(payload.cost_gross) || 0;
 
                             await this.api('invoices', 'POST', payload);
-                            this.showToast("DODANO DO BAZY!");
+                            this.showToast("Analiza zapisana w rejestrze.");
                             this.form = {
                                 invoice_number: '', issue_date: new Date().toISOString().split('T')[0],
                                 client_name: '', description: '', revenue_net: '', cost_net: '', cost_gross: ''
@@ -735,11 +745,11 @@ def serve_frontend():
                         } catch(e) { this.showToast(e.message, 'error'); }
                     },
                     async deleteInvoice(id) {
-                        if(!confirm("WYWALIĆ FAKTURĘ Z BAZY? TEGO NIE DA SIĘ COFNĄĆ!")) return;
+                        if(!confirm("Czy na pewno wykasować tę pozycję z rejestru?")) return;
                         try {
                             await this.api(`invoices/${id}`, 'DELETE');
                             this.invoices = this.invoices.filter(i => i.id !== id);
-                            this.showToast("USUNIĘTO FAKTURĘ.");
+                            this.showToast("Pozycja usunięta pomyślnie.");
                         } catch(e) { this.showToast(e.message, 'error'); }
                     }
                 }
